@@ -110,6 +110,7 @@ class AscendMetadata:
     block_tables: torch.Tensor
     # (batch_size,). The sequence length per sequence. Sequence length means
     # the computed tokens + new tokens None if it is a decoding.
+    query_start_loc: torch.Tensor
     query_lens: torch.Tensor
     seq_lens: torch.Tensor
     # Maximum query length in the batch. None for decoding.
@@ -140,6 +141,9 @@ class AscendAttentionMetadataBuilder:
 
     def build(self, num_reqs, num_actual_tokens, max_query_len,
               common_prefix_len):
+        query_start_loc_cpu = self.runner.query_start_loc_cpu[:num_reqs + 1]
+        query_start_loc = query_start_loc_cpu.to(self.runner.device,
+                                                 non_blocking=True)
         block_table = (
             self.runner.input_batch.block_table.get_device_tensor()[:num_reqs])
         query_lens = self.runner.query_lens
@@ -151,6 +155,7 @@ class AscendAttentionMetadataBuilder:
 
         attn_metadata = AscendMetadata(num_actual_tokens=num_actual_tokens,
                                        block_tables=block_table,
+                                       query_start_loc=query_start_loc,
                                        query_lens=query_lens,
                                        seq_lens=seq_lens,
                                        max_query_len=max_query_len,
